@@ -1,0 +1,146 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pg-v12
+  labels:
+    name: postgresql
+    environment: test
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: pg-v12
+  name: postgres-config
+  labels:
+    app: postgresql
+data:
+  POSTGRES_DB: postgredb
+  POSTGRES_USER: postgresadmin
+  POSTGRESS_PASSWORD: admin123
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  namespace: pg-v12
+  name: microk8s-hostpath
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: microk8s.io/hostpath
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: pg-v12
+  name: pg-pv
+  labels:
+    app: postgresql
+    type: local #?
+spec:
+  storageClassName: microk8s-hostpath
+  capacity:
+    storage: "3Gi"
+  accessModes:
+    - ReadWriteOnce
+#  claimRef:
+#     namespace: postgresql
+#     name: pg-pvc
+  hostPath:
+    path: "/var/data2"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: pg-v12
+  name: pg-pvc
+  labels:
+    app: postgresql
+spec:
+  storageClassName: microk8s-hostpath
+  capacity:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "3Gi"
+---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   namespace: postgresql
+#   name: postgresql-dpl
+# spec:
+#   selector:
+#     matchLabels:
+#       app: "postgresql"
+#   replicas: 1
+#   template:
+#     metadata:
+#       labels:
+#         app: postgresql
+#     spec:
+#       containers:
+#         - name: postgres
+#           image: postgres:10.4
+#           imagePullPolicy: "IfNotPresent"
+#           ports:
+#             - containerPort: 5432
+#           envFrom:
+#             - configMapRef:
+#                 name: postgres-config
+#           volumeMounts:
+#             - mountPath: /var/lib/postgresql/data
+#               name: postgresdb
+#       volumes:
+#         - name: postgresdb
+#           persistentVolumeClaim:
+#               claimName: pg-pvc
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: pg-v12
+  name: pg-statefulset
+  #labels:
+  #  app: postgresql
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+  serviceName: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:12
+          envFrom:
+          - confingMapRef:
+            name: postgres-config
+          ports:
+          - containerPort: 5432
+            name: postgtresdb
+          volumeMounts:
+          - name: pg-pv
+            mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgresdb
+        persistentVolumeClaim:
+          claimName: pg-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: postgresql
+  name: postgresql-svc
+  labels:
+    app: postgresql
+spec:
+  type: NodePort
+  ports:
+  - port: 5432
+  selector:
+    app: postgresql

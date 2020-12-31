@@ -1,0 +1,115 @@
+#################################
+#__________               __                              
+#\______   \____  _______/  |_  ___________   ____   ______
+# |     ___/  _ \/  ___/\   __\/ ___\_  __ \_/ __ \ /  ___/
+# |    |  (  <_> )___ \  |  | / /_/  >  | \/\  ___/ \___ \ 
+# |____|   \____/____  > |__| \___  /|__|    \___  >____  >
+#                    \/      /_____/             \/     \/ 
+#  _________ __                     .___        .__                     
+# /   _____//  |______    ____    __| _/ _____  |  |   ____   ____   ____  
+# \_____  \\   __\__  \  /    \  / __ |  \__  \ |  |  /  _ \ /    \_/ __ \ 
+# /        \|  |  / __ \|   |  \/ /_/ |   / __ \|  |_(  <_> )   |  \  ___/ 
+#/_______  /|__| (____  /___|  /\____ |  (____  /____/\____/|___|  /\___  >
+#        \/           \/     \/      \/       \/                 \/     \/ 
+#
+################
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgresql
+  labels:
+    name: postgresql
+    environment: test
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: postgresql
+  name: postgres-config
+  labels:
+    app: postgresql
+data:
+  POSTGRES_DB: postgredb
+  POSTGRES_USER: postgresadmin
+  POSTGRESS_PASSWORD: admin123
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: postgresql
+  name: pg-pv
+  labels:
+    app: postgresql
+    type: local #?
+spec:
+  storageClassName: manual
+  capacity:
+    storage: "3Gi"
+  accessModes:
+    - ReadWriteMany
+  claimRef:
+     namespace: postgresql
+     name: pg-pvc
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: postgresql
+  name: pg-pvc
+  labels:
+    app: postgresql
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: "3Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: postgresql
+  name: postgresql-dpl
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:10.6
+          #imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: postgres-config
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgresdb
+      volumes:
+        - name: postgresdb
+          persistentVolumeClaim:
+              claimName: pg-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: postgresql
+  name: postgresql-svc
+  labels:
+    app: postgresql
+spec:
+  type: NodePort
+  ports:
+  - port: 5432
+  selector:
+    app: postgresql

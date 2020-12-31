@@ -1,0 +1,24 @@
+{
+  "name": "hello-pg",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/esteban-santiago/odooWithKubernetes.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/esteban-santiago/odooWithKubernetes/issues"
+  },
+  "homepage": "https://github.com/esteban-santiago/odooWithKubernetes#readme",
+  "dependencies": {
+    "pg": "^8.5.1",
+    "randomstring": "^1.1.5"
+  }
+}

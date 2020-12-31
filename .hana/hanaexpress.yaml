@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sap
+  labels:
+    environment: test
+    name: sap
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-json
+data:
+  password.json: |+
+     {"master_password" : "HXEHana1"}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: sap
+  name: hanadb
+  labels:
+    name: hanadb
+    app: hanadb
+    environment: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hanadb
+  template:
+    metadata:
+      labels:
+        app: hanadb
+    spec:
+      containers:
+        - name: hanadb-test
+          image: estebansantiago/hanaexpress
+          ports: 
+            - containerPort: 39017
+          resources:
+            requests:
+              memory: "10Gi"
+            limits:
+              memory: "16Gi"
